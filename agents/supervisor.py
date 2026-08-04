@@ -9,6 +9,7 @@ class ResearchState(TypedDict):
     # User Input
     query: str
     uploaded_files: List[str]
+    citation_style: str
 
     # Search Results
     search_results: List[Dict]
@@ -43,11 +44,14 @@ class SupervisorAgent:
     """
 
     @staticmethod
-    def initialize_state(query: str, uploaded_files: List[str]) -> ResearchState:
+    def initialize_state(query: str,
+                          uploaded_files: List[str],
+                          citation_style: str = "IEEE") -> ResearchState:
 
         return {
             "query": query,
             "uploaded_files": uploaded_files,
+            "citation_style": citation_style,
 
             "search_results": [],
 
