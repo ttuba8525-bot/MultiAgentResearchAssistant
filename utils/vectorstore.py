@@ -1,5 +1,6 @@
 import os
 import pickle
+import shutil
 
 import faiss
 import numpy as np
@@ -26,8 +27,6 @@ class VectorStore:
         """
 
         if not embedded_documents:
-            # Nothing to add (e.g. no PDFs / no chunks this run).
-            # Adding an empty array would crash FAISS.
             return
 
         vectors = np.array(
@@ -76,6 +75,19 @@ class VectorStore:
 
         return results
 
+    @staticmethod
+    def _ensure_directory(path: str):
+        """
+        Make sure `path` exists and is a directory. If a plain
+        file with that name already exists (e.g. leftover from
+        a bad zip/export), remove it first so makedirs doesn't
+        raise FileExistsError.
+        """
+        if os.path.exists(path) and not os.path.isdir(path):
+            os.remove(path)
+
+        os.makedirs(path, exist_ok=True)
+
     def save(self,
              vector_path="data/vector_db/faiss.index",
              metadata_path="data/vector_db/documents.pkl"):
@@ -83,7 +95,7 @@ class VectorStore:
         Save FAISS index and metadata.
         """
 
-        os.makedirs("data/vector_db", exist_ok=True)
+        self._ensure_directory("data/vector_db")
 
         faiss.write_index(
             self.index,
