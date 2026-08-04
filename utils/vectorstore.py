@@ -25,6 +25,11 @@ class VectorStore:
         Add embedded documents to FAISS.
         """
 
+        if not embedded_documents:
+            # Nothing to add (e.g. no PDFs / no chunks this run).
+            # Adding an empty array would crash FAISS.
+            return
+
         vectors = np.array(
             [doc["embedding"] for doc in embedded_documents],
             dtype="float32"
@@ -41,6 +46,9 @@ class VectorStore:
         Perform similarity search.
         """
 
+        if self.index.ntotal == 0:
+            return []
+
         query = np.array(
             [query_embedding],
             dtype="float32"
@@ -48,7 +56,7 @@ class VectorStore:
 
         scores, indices = self.index.search(
             query,
-            top_k
+            min(top_k, self.index.ntotal)
         )
 
         results = []
@@ -89,12 +97,18 @@ class VectorStore:
              vector_path="data/vector_db/faiss.index",
              metadata_path="data/vector_db/documents.pkl"):
         """
-        Load FAISS index and metadata.
+        Load FAISS index and metadata if they exist.
+        Falls back to a fresh empty index instead of crashing
+        when no index has been saved yet (e.g. first run).
         """
 
-        self.index = faiss.read_index(
-            vector_path
-        )
+        if os.path.exists(vector_path) and os.path.exists(metadata_path):
 
-        with open(metadata_path, "rb") as f:
-            self.documents = pickle.load(f)
+            self.index = faiss.read_index(vector_path)
+
+            with open(metadata_path, "rb") as f:
+                self.documents = pickle.load(f)
+
+        else:
+            self.index = faiss.IndexFlatIP(self.embedding_dimension)
+            self.documents = []
