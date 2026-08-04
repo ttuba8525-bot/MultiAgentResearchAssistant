@@ -6,6 +6,7 @@ from utils.helpers import get_tavily_api_key
 class SearchAgent:
     def __init__(self):
         self.tavily = TavilyClient(api_key=get_tavily_api_key())
+        self.arxiv_client = arxiv.Client()
 
     def search_arxiv(self, query, max_results=5):
         """
@@ -21,7 +22,7 @@ class SearchAgent:
                 sort_by=arxiv.SortCriterion.Relevance
             )
 
-            for paper in search.results():
+            for paper in self.arxiv_client.results(search):
                 papers.append({
                     "title": paper.title,
                     "authors": ", ".join(
