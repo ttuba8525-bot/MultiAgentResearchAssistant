@@ -1,5 +1,4 @@
 from agents.embedding_agent import EmbeddingAgent
-from utils.vectorstore import VectorStore
 
 
 class RetrievalAgent:
@@ -8,12 +7,14 @@ class RetrievalAgent:
     using semantic similarity search.
     """
 
-    def __init__(self):
+    def __init__(self, vector_store):
+        """
+        vector_store: a VectorStore instance shared with the
+        node that populates it in this run. This avoids loading
+        a (possibly non-existent) index from disk at startup.
+        """
         self.embedder = EmbeddingAgent()
-        self.vector_store = VectorStore()
-
-        # Load the saved FAISS index
-        self.vector_store.load()
+        self.vector_store = vector_store
 
     def retrieve(self, query: str, top_k: int = 5):
         """
