@@ -21,14 +21,18 @@ search_agent = SearchAgent()
 parser_agent = ParserAgent()
 chunk_agent = ChunkAgent()
 embedding_agent = EmbeddingAgent()
-retrieval_agent = RetrievalAgent()
 reranker_agent = RerankerAgent()
 reviewer_agent = ReviewerAgent()
 planner_agent = PlannerAgent()
 writer_agent = WriterAgent()
 citation_agent = CitationAgent()
 
+# One VectorStore instance shared between the node that fills it
+# (vectorstore_node) and the RetrievalAgent that reads from it.
+# This avoids RetrievalAgent trying to load a not-yet-created
+# index from disk on the very first run.
 vector_store = VectorStore()
+retrieval_agent = RetrievalAgent(vector_store)
 
 
 # -----------------------------
@@ -48,11 +52,31 @@ def parser_node(state: ResearchState):
 
     parsed_documents = []
 
+    # Parse any uploaded PDFs
     for pdf in state["uploaded_files"]:
 
         parsed = parser_agent.parse_pdf(pdf)
 
         parsed_documents.append(parsed)
+
+    # Also turn arXiv abstracts into "documents" so the pipeline
+    # still has something to chunk/embed/retrieve/review even when
+    # the user hasn't uploaded any PDFs of their own.
+    for paper in state["search_results"]:
+
+        summary = paper.get("summary", "")
+
+        if not summary.strip():
+            continue
+
+        parsed_documents.append(
+            {
+                "full_text": summary,
+                "sections": {
+                    "Abstract": f'{paper.get("title", "")}\n{summary}'
+                }
+            }
+        )
 
     state["parsed_documents"] = parsed_documents
 
@@ -75,6 +99,10 @@ def chunk_node(state: ResearchState):
 
 
 def embedding_node(state: ResearchState):
+
+    if not state["chunks"]:
+        state["embedded_documents"] = []
+        return state
 
     embedded = embedding_agent.embed_documents(
         state["chunks"]
@@ -160,8 +188,9 @@ def writer_node(state: ResearchState):
 
 def citation_node(state: ResearchState):
 
-    citations = citation_agent.generate_ieee(
-        state["search_results"]
+    citations = citation_agent.generate(
+        state["search_results"],
+        style=state.get("citation_style", "IEEE")
     )
 
     state["citations"] = citations
