@@ -69,6 +69,7 @@ if generate:
     state = SupervisorAgent.initialize_state(
         query=query,
         uploaded_files=saved_files
+        citation_style=citation_style
     )
 
     with st.spinner("Running Multi-Agent Workflow..."):
