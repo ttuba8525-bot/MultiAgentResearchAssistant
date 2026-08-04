@@ -46,3 +46,12 @@ class CitationAgent:
             citations.append(citation)
 
         return citations
+
+    @classmethod
+    def generate(cls, papers: List[Dict], style: str = "IEEE") -> List[str]:
+        """
+        Dispatch to the correct citation format.
+        """
+        if style.upper() == "APA":
+            return cls.generate_apa(papers)
+        return cls.generate_ieee(papers)
